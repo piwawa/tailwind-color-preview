@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tailwind 颜色三样式预览器 — 下拉选择颜色、主题切换</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body{ 
+      -webkit-font-smoothing:antialiased; 
+      -moz-osx-font-smoothing:grayscale;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .transition-smooth{
+      transition:all .25s ease
+    }
+    /* 可复用的浅/深主题表面容器 */
+    .surface{
+      background: linear-gradient(135deg, #1f2937, #334155); /* slate-800 -> slate-700 */
+      border: 1px solid #475569; /* slate-600 */
+    }
+    .light-theme .surface{
+      background: linear-gradient(135deg, #ffffff, #f8fafc); /* white -> slate-50 */
+      border-color: #e5e7eb; /* gray-200 */
+    }
+    /* 预览区行内样本背景 */
+    .sample-bg{ background:#0f172a; } /* slate-900 */
+    .light-theme .sample-bg{ background:#f9fafb; } /* gray-50 */
+    /* 文案色（随主题） */
+    .label-text{ color:#f1f5f9; } /* slate-100 */
+    .light-theme .label-text{ color:#0f172a; } /* slate-900 */
+    .mono-text{ color:#cbd5e1; } /* slate-300 */
+    .light-theme .mono-text{ color:#334155; } /* slate-700 */
+    /* 主要按钮（复制） */
+    .btn-primary{ background:#2563eb; color:#fff; }
+    .btn-primary:hover{ background:#1d4ed8; }
+    .light-theme .btn-primary{ background:#3b82f6; color:#fff; }
+    .light-theme .btn-primary:hover{ background:#2563eb; }
+    /* 选择框（输入） */
+    .select-input{ background:#0b1220; color:#e5e7eb; border:2px solid #475569; }
+    .select-input:focus{ border-color:#3b82f6; }
+    .light-theme .select-input{ background:#ffffff; color:#0f172a; border:2px solid #cbd5e1; }
+    .light-theme .select-input:focus{ border-color:#3b82f6; }
+    
+    /* --- 主题切换按钮 --- */
+    #themeToggle {
+      background-color: #334155; /* slate-700 */
+      border: 1px solid #475569; /* slate-600 */
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), 0 1px 2px rgba(255,255,255,0.1);
+    }
+    #themeToggle:hover {
+      border-color: #64748b; /* slate-500 */
+    }
+    .light-theme #themeToggle {
+      background-color: #eab308; /* yellow-500 */
+      border-color: #facc15; /* yellow-400 */
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .light-theme #themeToggle:hover {
+      border-color: #fde047; /* yellow-300 */
+    }
+    #themeKnob {
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .light-theme #themeKnob {
+      background-color: #f8fafc; /* slate-50 */
+    }
+
+    /* 卡片悬停效果 */
+    .preview-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .preview-card:hover {
+      transform: translateY(-2px);
+    }
+    /* 复制点击反馈 */
+    .copy-flash {
+      animation: flash-animation 0.7s ease-out;
+    }
+    @keyframes flash-animation {
+      0% { box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.8); }
+      100% { box-shadow: inset 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
+    /* 按钮增强 */
+    .copy-btn {
+      transition: all 0.2s ease;
+    }
+    .copy-btn:hover {
+      transform: scale(1.05);
+    }
+    .copy-btn:active {
+      transform: scale(0.95);
+    }
+    /* 色块悬停效果 */
+    .color-sample {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .color-sample:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    /* 自定义滚动条 */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    .light-theme ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 5px;
+    }
+    .light-theme ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+  </style>
+</head>
+<body id="pageBody" class="bg-slate-900 text-slate-200 min-h-screen p-8">
+  <div class="max-w-6xl mx-auto">
+    <!-- 头部 -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+      <div>
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+          Tailwind 颜色预览器
+        </h1>
+        <p class="text-sm text-slate-400 mt-1">探索 Tailwind CSS 完整色彩体系</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- 主题切换 -->
+        <div id="themeToggle" role="switch" aria-checked="false" aria-label="切换深色/浅色主题" tabindex="0"
+          class="relative w-20 h-10 rounded-full p-1 transition-smooth cursor-pointer flex items-center">
+          <!-- 滑动圆点 -->
+          <div id="themeKnob" class="absolute top-1 left-1 w-8 h-8 rounded-full bg-slate-800 shadow-lg transition-smooth">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 控制面板 -->
+    <div id="controls" class="surface p-6 rounded-xl shadow-xl mb-8 border">
+      <div class="flex gap-3 items-center">
+        <div class="flex-1 relative">
+          <select id="colorSelect" 
+                  class="select-input w-full px-4 py-3 rounded-lg outline-none transition-colors cursor-pointer appearance-none">
+            <option value="">🎨 选择颜色（示例来自 Tailwind 默认调色板）</option>
+            <optgroup label="🌫️ 中性色">
+              <option value="slate">slate</option>
+              <option value="gray" selected>gray</option>
+              <option value="zinc">zinc</option>
+              <option value="neutral">neutral</option>
+              <option value="stone">stone</option>
+            </optgroup>
+            <optgroup label="🔥 暖色系">
+              <option value="red">red</option>
+              <option value="orange">orange</option>
+              <option value="amber">amber</option>
+              <option value="yellow">yellow</option>
+            </optgroup>
+            <optgroup label="🌿 绿/青系">
+              <option value="lime">lime</option>
+              <option value="green">green</option>
+              <option value="emerald">emerald</option>
+              <option value="teal">teal</option>
+              <option value="cyan">cyan</option>
+            </optgroup>
+            <optgroup label="💙 蓝/紫系">
+              <option value="sky">sky</option>
+              <option value="blue">blue</option>
+              <option value="indigo">indigo</option>
+              <option value="violet">violet</option>
+              <option value="purple">purple</option>
+            </optgroup>
+            <optgroup label="💖 鲜亮色">
+              <option value="fuchsia">fuchsia</option>
+              <option value="pink">pink</option>
+              <option value="rose">rose</option>
+            </optgroup>
+          </select>
+          <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+  <p class="mt-3 text-sm flex items-start gap-2">
+        <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+        </svg>
+        <span>从下拉选择颜色，自动生成预览。点击右上角<strong class="text-blue-300 dark:text-blue-400">主题按钮</strong>切换深色/浅色主题。</span>
+      </p>
+    </div>
+
+    <!-- 预览区域 -->
+    <div id="tables" class="space-y-6"></div>
+
+    <!-- 使用说明 -->
+  <div class="mt-8 surface p-6 rounded-xl border shadow-xl">
+      <h3 class="font-semibold text-lg mb-3 flex items-center gap-2">
+        <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 005.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
+        </svg>
+        使用说明
+      </h3>
+      <ul class="space-y-2 text-sm">
+        <li class="flex items-start gap-2">
+          <span class="text-blue-400 font-bold">•</span>
+          <span>从下拉选择颜色（例如 <code class="px-2 py-0.5 bg-slate-900 rounded text-blue-300">gray</code>、<code class="px-2 py-0.5 bg-slate-900 rounded text-sky-300">sky</code>、<code class="px-2 py-0.5 bg-slate-900 rounded text-emerald-300">emerald</code>），选择后会自动生成预览。</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-blue-400 font-bold">•</span>
+          <span>表格显示了 50 到 950 的色阶，以及对应的文字、背景和边框颜色效果。</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-blue-400 font-bold">•</span>
+          <span>点击任意颜色预览单元格（文字、背景、边框）即可复制对应的 Tailwind CSS 类名。</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const shades = [50,100,200,300,400,500,600,700,800,900,950];
+    const select = document.getElementById('colorSelect');
+    const tables = document.getElementById('tables');
+    const themeToggle = document.getElementById('themeToggle');
+    const themeKnob = document.getElementById('themeKnob');
+    const iconDark = document.getElementById('iconDark');
+    const iconLight = document.getElementById('iconLight');
+    const pageBody = document.getElementById('pageBody');
+    let theme = 'dark';
+
+    const moonIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+    const sunIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+
+    function applyThemeToRoot() {
+      if (theme === 'dark') {
+        pageBody.className = 'bg-slate-900 text-slate-200 min-h-screen p-8';
+        pageBody.classList.remove('light-theme');
+        themeToggle.setAttribute('aria-checked','false');
+        themeKnob.style.transform = 'translateX(0px)';
+        themeKnob.innerHTML = moonIconSVG;
+      } else {
+        pageBody.className = 'bg-gradient-to-br from-gray-50 to-blue-50 text-slate-900 min-h-screen p-8 light-theme';
+        themeToggle.setAttribute('aria-checked','true');
+        themeKnob.style.transform = 'translateX(40px)';
+        themeKnob.innerHTML = sunIconSVG;
+      }
+    }
+
+    themeToggle.addEventListener('click', () => {
+      theme = (theme === 'dark') ? 'light' : 'dark';
+      applyThemeToRoot();
+      const current = select.value;
+      // 切换主题时不滚动
+      if (current) buildTables(current, false);
+    });
+
+    // 键盘可访问性：Enter/Space 切换主题
+    themeToggle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        theme = (theme === 'dark') ? 'light' : 'dark';
+        applyThemeToRoot();
+        const current = select.value;
+        if (current) buildTables(current, false);
+      }
+    });
+
+    function copyOnClick(element, text) {
+      element.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          
+          // Visual feedback
+          element.classList.add('copy-flash');
+          const originalContent = element.innerHTML;
+          element.innerHTML = `<div class="flex items-center justify-center h-full w-full text-blue-300 text-xs font-bold">已复制!</div>`;
+
+          setTimeout(() => {
+            element.innerHTML = originalContent;
+            // Re-add hover effect if it was there
+            if(text.startsWith('bg-')) {
+               element.firstElementChild.classList.add('color-sample');
+            }
+            element.classList.remove('copy-flash');
+          }, 1000);
+
+        } catch (err) {
+          console.error('Failed to copy text: ', err);
+          const originalContent = element.innerHTML;
+          element.innerHTML = `<div class="flex items-center justify-center h-full w-full text-red-400 text-xs font-bold">复制失败</div>`;
+          setTimeout(() => {
+            element.innerHTML = originalContent;
+          }, 1500);
+        }
+      });
+    }
+
+    function buildTables(color, shouldScroll = true) {
+      tables.innerHTML = '';
+      if (!color) { 
+        tables.innerHTML = '<p class="text-center text-slate-400 py-12 text-lg">👈 请从上方下拉菜单选择颜色后生成预览</p>'; 
+        return; 
+      }
+
+      const cardBg = (theme === 'dark') ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200';
+      const monoText = (theme === 'dark') ? 'text-slate-300' : 'text-slate-700';
+      const labelText = (theme === 'dark') ? 'text-slate-100' : 'text-slate-900';
+      const sampleBg = (theme === 'dark') ? 'bg-slate-900' : 'bg-gray-50';
+
+      const wrapper = document.createElement('div');
+      wrapper.className = `preview-card ${cardBg} p-6 rounded-xl shadow-lg border`;
+
+      // Main grid container
+      const mainGrid = document.createElement('div');
+      mainGrid.className = 'grid grid-cols-[auto_1fr_1fr_1fr] gap-x-6 gap-y-4 items-center';
+      
+      // Header
+      const headers = [
+        '色阶',
+        `文字 (text-${color}-*)`,
+        `背景 (bg-${color}-*)`,
+        `边框 (border-${color}-*)`
+      ];
+      headers.forEach((text, i) => {
+        const headerEl = document.createElement('div');
+        headerEl.className = `font-semibold ${labelText} pb-3 border-b ${theme === 'dark' ? 'border-slate-600' : 'border-gray-300'} ${i > 0 ? 'text-center' : ''}`;
+        headerEl.innerHTML = text.replace(/\((.*?)\)/, `<code class="text-sm font-mono ${monoText}">($1)</code>`);
+        mainGrid.appendChild(headerEl);
+      });
+
+      // Rows for each shade
+      shades.forEach(sh => {
+        // 1. Shade Label
+        const shadeLabel = document.createElement('div');
+        shadeLabel.className = `font-mono text-sm ${monoText} pr-4 text-right`;
+        shadeLabel.innerText = sh;
+        mainGrid.appendChild(shadeLabel);
+
+        // 2. Text Color Preview
+        const textCell = document.createElement('div');
+        textCell.className = `flex items-center justify-center p-2 rounded-lg ${sampleBg} cursor-pointer transition-shadow`;
+        const textSample = document.createElement('div');
+        textSample.className = `text-${color}-${sh} text-sm font-medium truncate`;
+        textSample.innerText = 'The quick brown fox';
+        textCell.appendChild(textSample);
+        mainGrid.appendChild(textCell);
+        copyOnClick(textCell, `text-${color}-${sh}`);
+
+        // 3. Background Color Preview
+        const bgCell = document.createElement('div');
+        bgCell.className = `p-2 rounded-lg ${sampleBg} cursor-pointer transition-shadow`;
+        const bgSample = document.createElement('div');
+        bgSample.className = `color-sample bg-${color}-${sh} w-full h-8 rounded-md flex items-center justify-center font-semibold text-xs`;
+        bgSample.innerText = sh;
+        bgCell.appendChild(bgSample);
+        mainGrid.appendChild(bgCell);
+        copyOnClick(bgCell, `bg-${color}-${sh}`);
+
+        // 4. Border Color Preview
+        const borderCell = document.createElement('div');
+        borderCell.className = `p-2 rounded-lg ${sampleBg} cursor-pointer transition-shadow`;
+        const borderSample = document.createElement('div');
+        borderSample.className = `color-sample ${sampleBg} border-4 border-${color}-${sh} w-full h-8 rounded-md flex items-center justify-center font-semibold text-sm ${labelText}`;
+        borderSample.innerText = sh;
+        borderCell.appendChild(borderSample);
+        mainGrid.appendChild(borderCell);
+        copyOnClick(borderCell, `border-${color}-${sh}`);
+      });
+
+      wrapper.appendChild(mainGrid);
+      tables.appendChild(wrapper);
+      
+      // 只在首次生成或用户选择颜色时滚动
+      if (shouldScroll) {
+        wrapper.scrollIntoView({behavior:'smooth', block: 'start'});
+      }
+    }
+
+    select.addEventListener('change', () => buildForInput());
+    
+    function buildForInput() {
+      const val = select.value.trim();
+      if (!val) {
+        tables.innerHTML = '<p class="text-center text-slate-400 py-12 text-lg">👈 请从上方下拉菜单选择颜色后生成预览</p>';
+        return;
+      }
+      buildTables(val, false);
+    }
+
+    // 初始加载
+    applyThemeToRoot();
+    buildTables(select.value || 'gray');
+  </script>
+</body>
+</html>
